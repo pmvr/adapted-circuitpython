@@ -443,7 +443,7 @@ int __attribute__((used)) main(void) {
     filesystem_set_internal_writable_by_usb(true);
 
     run_boot_py(safe_mode);
-
+    
     // Start serial and HID after giving boot.py a chance to tweak behavior.
     serial_init();
 

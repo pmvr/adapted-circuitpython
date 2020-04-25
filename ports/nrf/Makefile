@@ -83,6 +83,8 @@ INC += -I./peripherals
 INC += -I../../lib/mp-readline
 INC += -I../../lib/tinyusb/src
 INC += -I../../supervisor/shared/usb
+INC += -I./util
+INC += -I./crypto/backend/cc310/
 
 #Debugging/Optimization
 ifeq ($(DEBUG), 1)
@@ -115,7 +117,7 @@ CFLAGS += \
 CFLAGS += -D__START=main
 
 LDFLAGS = $(CFLAGS) -nostartfiles -fshort-enums -Wl,-nostdlib -Wl,-T,$(GENERATED_LD_FILE) -Wl,-Map=$@.map -Wl,-cref -Wl,-gc-sections -specs=nano.specs
-LIBS := -lgcc -lc
+LIBS := -L ../../../modules/cc310/ -lnrf_cc310_0.9.12 -lgcc -lc
 
 LDFLAGS += -mthumb -mcpu=cortex-m4
 
@@ -174,7 +176,7 @@ SRC_C += \
         peripherals/nrf/nvm.c \
 	peripherals/nrf/timers.c \
 	sd_mutex.c \
-	supervisor/shared/memory.c
+	supervisor/shared/memory.c \
 
 # USB source files for nrf52840
 ifeq ($(MCU_SUB_VARIANT),nrf52840)

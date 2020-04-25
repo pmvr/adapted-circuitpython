@@ -25,6 +25,8 @@
  */
 
 #include "py/objproperty.h"
+#include "lib/utils/buffer_helper.h"
+#include "py/runtime.h"
 #include "shared-bindings/usb_hid/Device.h"
 
 //| .. currentmodule:: usb_hid
@@ -98,10 +100,27 @@ const mp_obj_property_t usb_hid_device_usage_obj = {
               (mp_obj_t)&mp_const_none_obj},
 };
 
+//|   .. method:: read_report(self, buffer, start=0, end=None)
+//|
+//|     Read the next out-report from the queue into a buffer.
+//|     Return the number of bytes read.
+//|
+STATIC mp_obj_t usb_hid_device_read_report(mp_obj_t self_in, mp_obj_t timeout) {
+    usb_hid_device_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    if (self->out_report_count == 0) return mp_const_empty_bytes;
+    mp_obj_t *report = MP_OBJ_TO_PTR(mp_obj_new_bytes(self->out_report_buffer, self->out_report_count));
+    self->out_report_count = 0;
+    return report;
+}
+MP_DEFINE_CONST_FUN_OBJ_2(usb_hid_device_read_report_obj, usb_hid_device_read_report);
+
+
+
 STATIC const mp_rom_map_elem_t usb_hid_device_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_send_report),    MP_ROM_PTR(&usb_hid_device_send_report_obj) },
     { MP_ROM_QSTR(MP_QSTR_usage_page),     MP_ROM_PTR(&usb_hid_device_usage_page_obj)},
     { MP_ROM_QSTR(MP_QSTR_usage),          MP_ROM_PTR(&usb_hid_device_usage_obj)},
+    { MP_ROM_QSTR(MP_QSTR_read_report),    MP_ROM_PTR(&usb_hid_device_read_report_obj)},
 };
 
 STATIC MP_DEFINE_CONST_DICT(usb_hid_device_locals_dict, usb_hid_device_locals_dict_table);

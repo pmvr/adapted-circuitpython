@@ -13,7 +13,7 @@ ALL_DEVICES='CDC,MSC,AUDIO,HID'
 ALL_DEVICES_SET=frozenset(ALL_DEVICES.split(','))
 DEFAULT_DEVICES='CDC,MSC,AUDIO,HID'
 
-ALL_HID_DEVICES='KEYBOARD,MOUSE,CONSUMER,SYS_CONTROL,GAMEPAD,DIGITIZER,XAC_COMPATIBLE_GAMEPAD,RAW'
+ALL_HID_DEVICES='KEYBOARD,MOUSE,CONSUMER,SYS_CONTROL,GAMEPAD,DIGITIZER,XAC_COMPATIBLE_GAMEPAD,RAW,FIDO'
 ALL_HID_DEVICES_SET=frozenset(ALL_HID_DEVICES.split(','))
 # Digitizer works on Linux but conflicts with mouse, so omit it.
 DEFAULT_HID_DEVICES='KEYBOARD,MOUSE,CONSUMER,GAMEPAD'
@@ -581,6 +581,12 @@ for name in args.hid_devices:
 static uint8_t {name}_report_buffer[{report_length}];
 """.format(name=name.lower(), report_length=hid_report_descriptors.HID_DEVICE_DATA[name].report_length))
 
+# Write out USB HID report buffer definitions.
+for name in args.hid_devices:
+    c_file.write("""\
+static uint8_t {name}_out_report_buffer[{report_length}];
+""".format(name=name.lower(), report_length=hid_report_descriptors.HID_DEVICE_DATA[name].report_length))
+
 # Write out table of device objects.
 c_file.write("""
 usb_hid_device_obj_t usb_hid_devices[] = {
@@ -595,6 +601,8 @@ for name in args.hid_devices:
         .report_length = {report_length},
         .usage_page    = {usage_page:#04x},
         .usage         = {usage:#04x},
+        .out_report_buffer = {name}_out_report_buffer,
+        .out_report_count = 0,
     }},
 """.format(name=name.lower(), report_id=report_ids[name],
            report_length=device_data.report_length,

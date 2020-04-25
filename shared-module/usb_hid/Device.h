@@ -41,8 +41,10 @@ typedef struct  {
     uint8_t* report_buffer;
     uint8_t report_id;
     uint8_t report_length;
-    uint8_t usage_page;
+    uint16_t usage_page;
     uint8_t usage;
+    uint16_t out_report_count;
+    uint8_t* out_report_buffer;
 } usb_hid_device_obj_t;
 
 

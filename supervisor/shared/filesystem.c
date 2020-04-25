@@ -33,6 +33,7 @@
 #include "py/mpstate.h"
 
 #include "supervisor/flash.h"
+#include "fido-drive.h"
 
 static mp_vfs_mount_t _mp_vfs;
 static fs_user_mount_t _internal_vfs;
@@ -63,14 +64,14 @@ inline void filesystem_tick(void) {
 }
 
 
-static void make_empty_file(FATFS *fatfs, const char *path) {
+/*static void make_empty_file(FATFS *fatfs, const char *path) {
     FIL fp;
     f_open(fatfs, &fp, path, FA_WRITE | FA_CREATE_ALWAYS);
     f_close(&fp);
-}
+}*/
 
 
-static void make_sample_code_file(FATFS *fatfs) {
+/*static void make_sample_code_file(FATFS *fatfs) {
     #if CIRCUITPY_FULL_BUILD
     FIL fs;
     UINT char_written = 0;
@@ -80,7 +81,7 @@ static void make_sample_code_file(FATFS *fatfs) {
     f_write(&fs, buffer, sizeof(buffer) - 1, &char_written);
     f_close(&fs);
     #endif
-}
+}*/
 
 // we don't make this function static because it needs a lot of stack and we
 // want it to be executed without using stack within main() function
@@ -111,21 +112,47 @@ void filesystem_init(bool create_allowed, bool force_create) {
 #endif
 
         // inhibit file indexing on MacOS
-        f_mkdir(&vfs_fat->fatfs, "/.fseventsd");
-        make_empty_file(&vfs_fat->fatfs, "/.metadata_never_index");
-        make_empty_file(&vfs_fat->fatfs, "/.Trashes");
-        make_empty_file(&vfs_fat->fatfs, "/.fseventsd/no_log");
+        //f_mkdir(&vfs_fat->fatfs, "/.fseventsd");
+        //make_empty_file(&vfs_fat->fatfs, "/.metadata_never_index");
+        //make_empty_file(&vfs_fat->fatfs, "/.Trashes");
+        //make_empty_file(&vfs_fat->fatfs, "/.fseventsd/no_log");
         // make a sample code.py file
-        make_sample_code_file(&vfs_fat->fatfs);
+        //make_sample_code_file(&vfs_fat->fatfs);
 
         // create empty lib directory
-        f_mkdir(&vfs_fat->fatfs, "/lib");
-
+        // f_mkdir(&vfs_fat->fatfs, "/lib");
+        
         // and ensure everything is flushed
         supervisor_flash_flush();
     } else if (res != FR_OK) {
         return;
     }
+    FIL fs;
+    UINT char_written = 0, char_read;
+    uint32_t read_version;
+    bool write_fs = true;
+    res = f_open(&vfs_fat->fatfs, &fs, file_version.filename, FA_READ);
+    if (res == FR_OK) {
+        f_read(&fs, (uint8_t*)(&read_version), 4, &char_read);
+        f_close(&fs);
+        if (char_read == 4) {
+            if (read_version >= version) {
+                write_fs = false;
+            }
+        }
+    }
+    if (write_fs) {
+        for (uint8_t i=0; i<sizeof(filesystem)/sizeof(struct file *); i++) {
+            f_open(&vfs_fat->fatfs, &fs, filesystem[i]->filename, FA_WRITE | FA_CREATE_ALWAYS);
+            f_write(&fs, filesystem[i]->data, filesystem[i]->len, &char_written);
+            f_close(&fs);
+        }
+        f_open(&vfs_fat->fatfs, &fs, file_version.filename, FA_WRITE | FA_CREATE_ALWAYS);
+        f_write(&fs, file_version.data, file_version.len, &char_written);
+        f_close(&fs);
+        supervisor_flash_flush();
+    }
+
     mp_vfs_mount_t *vfs = &_mp_vfs;
     vfs->str = "/";
     vfs->len = 1;

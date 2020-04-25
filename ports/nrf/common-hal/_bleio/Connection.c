@@ -50,6 +50,8 @@
 
 #include "common-hal/_bleio/bonding.h"
 
+#include "nrf_gpio.h"
+
 #define BLE_ADV_LENGTH_FIELD_SIZE   1
 #define BLE_ADV_AD_TYPE_FIELD_SIZE  1
 #define BLE_AD_TYPE_FLAGS_DATA_SIZE 1
@@ -230,6 +232,61 @@ bool connection_on_ble_evt(ble_evt_t *ble_evt, void *self_in) {
             // 3. Pair Key exchange ("just works" implemented now; TODO: out-of-band key pairing)
             // 4. Connection is secured: BLE_GAP_EVT_CONN_SEC_UPDATE
             // 5. Long-term Keys exchanged: BLE_GAP_EVT_AUTH_STATUS
+            #if BOARD == pca10059
+            #define LED2_B NRF_GPIO_PIN_MAP(0,12)
+            #define BUTTON NRF_GPIO_PIN_MAP(1,6)
+            // If nRF52 USB Dongle is powered from USB (high voltage mode),
+            // GPIO output voltage is set to 1.8 V by default, which is not
+            // enough to turn on green and blue LEDs. Therefore, GPIO voltage
+            // needs to be increased to 3.0 V by configuring the UICR register.
+            if (NRF_POWER->MAINREGSTATUS & (POWER_MAINREGSTATUS_MAINREGSTATUS_High << POWER_MAINREGSTATUS_MAINREGSTATUS_Pos)) {
+                if ((NRF_UICR->REGOUT0 & UICR_REGOUT0_VOUT_Msk) ==
+                    (UICR_REGOUT0_VOUT_DEFAULT << UICR_REGOUT0_VOUT_Pos))
+                {
+                    NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Wen;
+                    while (NRF_NVMC->READY == NVMC_READY_READY_Busy){}
+
+                    NRF_UICR->REGOUT0 = (NRF_UICR->REGOUT0 & ~((uint32_t)UICR_REGOUT0_VOUT_Msk)) |
+                                        (UICR_REGOUT0_VOUT_3V0 << UICR_REGOUT0_VOUT_Pos);
+
+                    NRF_NVMC->CONFIG = NVMC_CONFIG_WEN_Ren;
+                    while (NRF_NVMC->READY == NVMC_READY_READY_Busy){}
+
+                    // System reset is needed to update UICR registers.
+                    NVIC_SystemReset();
+                }
+            }
+            nrf_gpio_cfg_input(BUTTON, NRF_GPIO_PIN_PULLUP);  // initalize button
+            nrf_gpio_cfg_output(LED2_B);  // initalize blue led
+            #define MAX_TIME 15000
+            #define DELAY_TIME 10
+            bool approved;
+            uint8_t WINK_FREQ[] = {4, 12};
+            for (uint8_t j=0; j<sizeof(WINK_FREQ); j++) {
+                approved = false;
+                uint32_t counter = 0;
+                while (counter < MAX_TIME) {
+                    if (!nrf_gpio_pin_read(BUTTON)) {
+                        approved = true;
+                        while (!nrf_gpio_pin_read(BUTTON)) NRFX_DELAY_US(1000);
+                        break;
+                    }
+                    if (((counter * WINK_FREQ[j]) / 2000) % 2 == 0) {
+                        nrf_gpio_pin_write(LED2_B, 1);  // off
+                    }
+                    else {
+                        nrf_gpio_pin_write(LED2_B, 0);  // on
+                    }
+                    for (uint8_t i=0; i<DELAY_TIME; i++) {
+                        NRFX_DELAY_US(1000);  // delaying for 1 millisecond
+                    }
+                    counter += DELAY_TIME;
+                }
+                if (approved == false) break;
+            }
+            nrf_gpio_pin_write(LED2_B, 1);  // off
+            if (approved == false) break;
+            #endif
 
             bonding_clear_keys(&self->bonding_keys);
             self->ediv = EDIV_INVALID;

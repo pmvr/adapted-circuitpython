@@ -33,7 +33,7 @@
 #include "supervisor/shared/tick.h"
 #include "tusb.h"
 
-uint8_t common_hal_usb_hid_device_get_usage_page(usb_hid_device_obj_t *self) {
+uint16_t common_hal_usb_hid_device_get_usage_page(usb_hid_device_obj_t *self) {
     return self->usage_page;
 }
 
@@ -72,6 +72,15 @@ static usb_hid_device_obj_t* get_hid_device(uint8_t report_id) {
     return NULL;
 }
 
+static usb_hid_device_obj_t* get_fido_device(void) {
+    for (uint8_t i = 0; i < USB_HID_NUM_DEVICES; i++) {
+        if (usb_hid_devices[i].usage_page == 0xf1d0) {
+            return &usb_hid_devices[i];
+        }
+    }
+    return NULL;
+}
+
 // Callbacks invoked when receive Get_Report request through control endpoint
 uint16_t tud_hid_get_report_cb(uint8_t report_id, hid_report_type_t report_type, uint8_t* buffer, uint16_t reqlen) {
     // only support Input Report
@@ -84,14 +93,31 @@ uint16_t tud_hid_get_report_cb(uint8_t report_id, hid_report_type_t report_type,
 
 // Callbacks invoked when receive Set_Report request through control endpoint
 void tud_hid_set_report_cb(uint8_t report_id, hid_report_type_t report_type, uint8_t const* buffer, uint16_t bufsize) {
-    usb_hid_device_obj_t* hid_device = get_hid_device(report_id);
-
+    //usb_hid_device_obj_t* hid_device = get_hid_device(report_id);
+    usb_hid_device_obj_t* hid_device = get_fido_device();
+/*  printf("usage page %x\n", hid_device->usage_page);
+    printf("bufsize %d\n", bufsize);
+    printf("report_type %d %d\n", report_type, HID_REPORT_TYPE_OUTPUT);
+    printf("report_length %d\n", hid_device->report_length);
+*/
     if ( report_type == HID_REPORT_TYPE_OUTPUT ) {
+        if ((bufsize > 0) && (bufsize <= hid_device->report_length)) {
+            memcpy(hid_device->out_report_buffer, buffer, bufsize);
+            hid_device->out_report_count = bufsize;
+        }
+    }
+    /*if ( report_type == HID_REPORT_TYPE_INVALID ) {
         // Check if it is Keyboard device
         if (hid_device->usage_page == HID_USAGE_PAGE_DESKTOP &&
                 hid_device->usage == HID_USAGE_DESKTOP_KEYBOARD) {
             // This is LED indicator (CapsLock, NumLock)
             // TODO Light up some LED here
         }
-    }
+        else {
+            if ((bufsize > 0) && (bufsize < sizeof(hid_device->out_report_buffer))) {
+                for (uint16_t i = 0; i<bufsize; i++) hid_device->out_report_buffer[i] = buffer[i];
+                hid_device->out_report_count = bufsize;
+            }
+        }
+    }*/
 }

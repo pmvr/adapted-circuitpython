@@ -28,3 +28,6 @@
 #define MICROPY_HW_MCU_NAME         "nRF52840"
 
 #define MICROPY_HW_LED_STATUS          (&pin_P0_06)
+
+#define MODULE_EXAMPLE_ENABLED (1)
+#define MODULE_CC310_ENABLED (1)

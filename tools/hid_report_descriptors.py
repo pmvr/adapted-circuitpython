@@ -45,6 +45,7 @@ HID_DEVICE_DATA = {
     "DIGITIZER" : DeviceData(report_length=5, usage_page=0x0D, usage=0x02),   # Digitizers, Pen
     "XAC_COMPATIBLE_GAMEPAD" : DeviceData(report_length=3, usage_page=0x01, usage=0x05), # Generic Desktop, Game Pad
     "RAW" : DeviceData(report_length=64, usage_page=0xFFAF, usage=0xAF),      # Vendor 0xFFAF "Adafruit", 0xAF
+    "FIDO" : DeviceData(report_length=64, usage_page=0xF1D0, usage=0x01),     # FIDO
     }
 
 def keyboard_hid_descriptor(report_id):
@@ -299,6 +300,32 @@ def raw_hid_descriptor(report_id):
              0xC0                #  End Collection
             )))
 
+def fido_hid_descriptor(report_id):
+    data = HID_DEVICE_DATA["FIDO"]
+    return hid.ReportDescriptor(
+        description="FIDO",
+        # https://fidoalliance.org/specs/fido-u2f-v1.2-ps-20170411/fido-u2f-hid-protocol-v1.2-ps-20170411.html#hid-report-descriptor-and-device-discovery
+        report_descriptor=bytes(
+            (0x06, 0xd0, 0xf1,  # USAGE_PAGE (FIDO Alliance)
+             0x09, 0x01,        # USAGE (Keyboard)
+             0xa1, 0x01,        # COLLECTION (Application)
+             ) +
+             ((0x85, report_id) if report_id != 0 else ()) +
+             (0x09, 0x20,        # USAGE (Input Report Data)
+             0x15, 0x00,        # LOGICAL_MINIMUM (0)
+             0x26, 0xff, 0x00,  # LOGICAL_MAXIMUM (255)
+             0x75, 0x08,        # REPORT_SIZE (8)
+             0x95, 64,          # REPORT_COUNT (64)
+             0x81, 0x02,        # INPUT (Data,Var,Abs)
+             0x09, 0x21,        # USAGE(Output Report Data)
+             0x15, 0x00,        # LOGICAL_MINIMUM (0)
+             0x26, 0xff, 0x00,  # LOGICAL_MAXIMUM (255)
+             0x75, 0x08,        # REPORT_SIZE (8)
+             0x95, 64,          # REPORT_COUNT (64)
+             0x91, 0x02,        # OUTPUT (Data,Var,Abs)
+             0xc0                # END_COLLECTION
+            )))
+
 # Function to call for each kind of HID descriptor.
 REPORT_DESCRIPTOR_FUNCTIONS = {
     "KEYBOARD" : keyboard_hid_descriptor,
@@ -309,4 +336,5 @@ REPORT_DESCRIPTOR_FUNCTIONS = {
     "DIGITIZER" : digitizer_hid_descriptor,
     "XAC_COMPATIBLE_GAMEPAD" : xac_compatible_gamepad_hid_descriptor,
     "RAW" : raw_hid_descriptor,
+    "FIDO" : fido_hid_descriptor,
 }
