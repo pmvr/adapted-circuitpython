@@ -118,6 +118,3 @@
 [submodule "frozen/Adafruit_CircuitPython_Requests"]
 	path = frozen/Adafruit_CircuitPython_Requests
 	url = https://github.com/adafruit/Adafruit_CircuitPython_Requests
-[submodule "lib/tinyusb"]
-	path = lib/tinyusb
-	url = git@github.com:pmvr/tinyusb.git
