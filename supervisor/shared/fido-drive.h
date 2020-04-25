@@ -47,5 +47,5 @@ const struct file file_cert = {"cert.der", 666, cert_data};
 
 const struct file *filesystem[] = {&file_cbor_ctap_parameters, &file_cbor_io, &file_ctap2, &file_ctap_errors, &file_hid, &file_keystore, &file_u2f, &file_up_check, &file_util, &file_wink, &file_main, &file_boot, &file_cert};
 
-const uint32_t version = 17;
+const uint32_t version = 18;
 const struct file file_version = {"version.bin", 4, (uint8_t*)(&version)};
